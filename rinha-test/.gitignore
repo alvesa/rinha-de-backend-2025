@@ -1,1 +1,8 @@
 results/
+node_modules/
+dist/
+coverage/
+.env
+*.log
+*.tsbuildinfo
+*.d.ts
