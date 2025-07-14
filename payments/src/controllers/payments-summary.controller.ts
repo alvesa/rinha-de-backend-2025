@@ -1,25 +1,16 @@
-import { Controller, Get, HttpCode, Query } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
+import { PaymentsService } from 'src/services/payments.service';
 import { PaymentSummaryResponse } from './dtos/payment-summary.response';
-import { PaymentSummaryRequest } from './dtos/payment-summary.request';
 
 @Controller('payments-summary')
-export class PaymentsSummaryController {
+export class PaymentSummaryController {
+  constructor(private readonly paymentsService: PaymentsService) {}
+
   @Get()
-  @HttpCode(200)
-  paymentsSummary(
-    @Query() { from, to }: PaymentSummaryRequest,
-  ): PaymentSummaryResponse {
-    return {
-      from: from,
-      to: to,
-      default: {
-        totalRequests: 43236,
-        totalAmount: 415542345.98,
-      },
-      fallback: {
-        totalRequests: 423545,
-        totalAmount: 329347.34,
-      },
-    };
+  async getPaymentSummary(
+    @Query('from') from: string,
+    @Query('to') to: string,
+  ): Promise<PaymentSummaryResponse> {
+    return await this.paymentsService.getPaymentSummary(from, to);
   }
 }
