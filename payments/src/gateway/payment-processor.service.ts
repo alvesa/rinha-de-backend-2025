@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { PaymentHealthCheckResponse } from 'src/controllers/dtos/payment-health-check.response';
 import { PaymentSummaryResponse } from 'src/controllers/dtos/payment-summary.response';
 
@@ -34,8 +34,10 @@ export class PaymentProcessorService {
     from: string,
     to: string,
   ): Promise<PaymentSummaryResponse> {
+    const parameters = from && to ? `?from=${from}&to=${to}` : '';
+
     const response = await fetch(
-      `${BASE_URL}/admin/payments-summary?from=${from}&to=${to}`,
+      `${BASE_URL}/admin/payments-summary${parameters}`,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -45,7 +47,10 @@ export class PaymentProcessorService {
       },
     );
     if (!response.ok) {
-      throw new Error(`Failed to get payment summary: ${response.statusText}`);
+      throw new HttpException(
+        `Failed to get payment summary: ${response.statusText}`,
+        response.status,
+      );
     }
 
     const result: PaymentSummaryResponse = await response.json();
