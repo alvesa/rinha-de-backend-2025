@@ -11,6 +11,7 @@ export class PaymentSummaryController {
     @Query('from') from: string,
     @Query('to') to: string,
   ): Promise<PaymentSummaryResponse> {
+    console.log(`Fetching payment summary from ${from} to ${to}`);
     return await this.paymentsService.getPaymentSummary(from, to);
   }
 }

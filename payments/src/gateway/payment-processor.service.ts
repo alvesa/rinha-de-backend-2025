@@ -68,6 +68,10 @@ export class PaymentProcessorService {
   ): Promise<PaymentSummaryResponse> {
     const parameters = from && to ? `?from=${from}&to=${to}` : '';
 
+    console.log(
+      `url: ${this.BASE_URL_PAYMENT_PROCESSOR}/admin/payments-summary${parameters}`,
+    );
+
     const response = await fetch(
       `${this.BASE_URL_PAYMENT_PROCESSOR}/admin/payments-summary${parameters}`,
       {

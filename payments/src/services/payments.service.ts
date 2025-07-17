@@ -17,7 +17,7 @@ export class PaymentsService {
     correlationId: string;
     amount: number;
   }): Promise<PaymentDto> {
-    return this.paymentProcessorService.processPaymentFallback({
+    return this.paymentProcessorService.processPayment({
       correlationId,
       amount,
     });
@@ -27,10 +27,7 @@ export class PaymentsService {
     from: string,
     to: string,
   ): Promise<PaymentSummaryResponse> {
-    return await this.paymentProcessorService.getPaymentSummaryFallback(
-      from,
-      to,
-    );
+    return await this.paymentProcessorService.getPaymentSummary(from, to);
   }
 
   async paymentHealthCheck(): Promise<PaymentHealthCheckResponse> {
