@@ -1,18 +1,21 @@
 services:
-  # nginx:
-  #   image: nginx:alpine
-  #   container_name: nginx
-  #   ports:
-  #     - '9999:9999'
-  #   volumes:
-  #     - ./nginx.conf:/etc/nginx/nginx.conf
-  #   networks:
-  #     - backend
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         cpus: '0.5'
-  #         memory: '50MB'
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    ports:
+      - '9999:9999'
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    networks:
+      - backend
+    depends_on:
+      - payment-01
+      - payment-02
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: '50MB'
   payment-01: &payment-01 # image: payment-processor:latest
     build:
       context: ../payments
@@ -27,6 +30,7 @@ services:
       - 9998:9999
     networks:
       - backend
+      - payment-processor
     deploy:
       resources:
         limits:
@@ -44,6 +48,7 @@ services:
       - 9997:9999
     networks:
       - backend
+      - payment-processor
     deploy:
       resources:
         limits:
@@ -52,5 +57,6 @@ services:
 networks:
   backend:
     driver: bridge
+    name: backend
   payment-processor:
     external: true
