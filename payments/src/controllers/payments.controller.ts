@@ -12,11 +12,11 @@ export class PaymentsController {
   @HttpCode(201)
   async processPayment(
     @Body()
-    { correlationId, amount }: PaymentRequest,
+    request: PaymentRequest,
   ): Promise<PaymentResponse> {
     const message = await this.paymentsService.processPayment({
-      correlationId,
-      amount,
+      correlationId: request.correlationId,
+      amount: request.amount,
     });
     return message;
   }

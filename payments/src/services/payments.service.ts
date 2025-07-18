@@ -10,24 +10,52 @@ export class PaymentsService {
     private readonly paymentProcessorService: PaymentProcessorService,
   ) {}
 
-  processPayment({
+  async processPayment({
     correlationId,
     amount,
   }: {
     correlationId: string;
     amount: number;
   }): Promise<PaymentDto> {
-    return this.paymentProcessorService.processPayment({
-      correlationId,
-      amount,
-    });
+    try {
+      await this.paymentProcessorService.processPayment({
+        correlationId,
+        amount,
+      });
+
+      return { message: 'Payment processed successfully' };
+    } catch (error: any) {
+      console.error(`Error processing payment: ${error}`);
+
+      await this.paymentProcessorService.processPaymentFallback({
+        correlationId,
+        amount,
+      });
+
+      return { message: 'Payment processed successfully with fallback' };
+    }
   }
 
   async getPaymentSummary(
     from: string,
     to: string,
   ): Promise<PaymentSummaryResponse> {
-    return await this.paymentProcessorService.getPaymentSummary(from, to);
+    const defaultPaymentSummary =
+      await this.paymentProcessorService.getPaymentSummary(from, to);
+
+    const fallbackPaymentSummary =
+      await this.paymentProcessorService.getPaymentSummaryFallback(from, to);
+
+    return {
+      default: {
+        totalRequests: defaultPaymentSummary.totalRequests,
+        totalAmount: defaultPaymentSummary.totalAmount,
+      },
+      fallback: {
+        totalRequests: fallbackPaymentSummary.totalRequests,
+        totalAmount: fallbackPaymentSummary.totalAmount,
+      },
+    };
   }
 
   async paymentHealthCheck(): Promise<PaymentHealthCheckResponse> {

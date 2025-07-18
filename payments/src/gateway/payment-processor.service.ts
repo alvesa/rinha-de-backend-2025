@@ -1,6 +1,6 @@
 import { HttpException, Injectable } from '@nestjs/common';
 import { PaymentHealthCheckResponse } from 'src/controllers/dtos/payment-health-check.response';
-import { PaymentSummaryResponse } from 'src/controllers/dtos/payment-summary.response';
+import { PaymentSummaryDto } from 'src/services/dtos/payment-summary.dto';
 
 @Injectable()
 export class PaymentProcessorService {
@@ -15,6 +15,12 @@ export class PaymentProcessorService {
     correlationId: string;
     amount: number;
   }): Promise<any> {
+    const request = JSON.stringify({
+      correlationId,
+      amount,
+      requestedAt: new Date(),
+    });
+
     const response = await fetch(
       `${this.BASE_URL_PAYMENT_PROCESSOR}/payments`,
       {
@@ -22,10 +28,7 @@ export class PaymentProcessorService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          correlationId,
-          amount,
-        }),
+        body: request,
       },
     );
     if (!response.ok) {
@@ -42,6 +45,12 @@ export class PaymentProcessorService {
     correlationId: string;
     amount: number;
   }): Promise<any> {
+    const request = JSON.stringify({
+      correlationId,
+      amount,
+      requestedAt: new Date(),
+    });
+
     const response = await fetch(
       `${this.BASE_URL_PAYMENT_PROCESSOR_FALLBACK}/payments`,
       {
@@ -49,13 +58,14 @@ export class PaymentProcessorService {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          correlationId,
-          amount,
-        }),
+        body: request,
       },
     );
     if (!response.ok) {
+      console.error(
+        `Error processing payment with fallback: ${response.statusText}`,
+      );
+
       throw new Error(`Failed to process payment: ${response.statusText}`);
     }
 
@@ -65,12 +75,8 @@ export class PaymentProcessorService {
   async getPaymentSummary(
     from: string,
     to: string,
-  ): Promise<PaymentSummaryResponse> {
+  ): Promise<PaymentSummaryDto> {
     const parameters = from && to ? `?from=${from}&to=${to}` : '';
-
-    console.log(
-      `url: ${this.BASE_URL_PAYMENT_PROCESSOR}/admin/payments-summary${parameters}`,
-    );
 
     const response = await fetch(
       `${this.BASE_URL_PAYMENT_PROCESSOR}/admin/payments-summary${parameters}`,
@@ -89,14 +95,14 @@ export class PaymentProcessorService {
       );
     }
 
-    const result: PaymentSummaryResponse = await response.json();
+    const result: PaymentSummaryDto = await response.json();
     return result;
   }
 
   async getPaymentSummaryFallback(
     from: string,
     to: string,
-  ): Promise<PaymentSummaryResponse> {
+  ): Promise<PaymentSummaryDto> {
     const parameters = from && to ? `?from=${from}&to=${to}` : '';
 
     const response = await fetch(
@@ -116,7 +122,7 @@ export class PaymentProcessorService {
       );
     }
 
-    const result: PaymentSummaryResponse = await response.json();
+    const result: PaymentSummaryDto = await response.json();
     return result;
   }
 
