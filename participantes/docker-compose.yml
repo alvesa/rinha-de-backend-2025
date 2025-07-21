@@ -14,8 +14,24 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.3'
+          cpus: '0.2'
           memory: '50MB'
+  payment-queue:
+    image: redis:alpine
+    container_name: payment-queue
+    hostname: payment-queue
+    networks:
+      - backend
+    ports:
+      - '6379:6379'
+    environment:
+      - REDIS_HOST=payment-queue
+      - REDIS_PORT=6379
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: '100MB'
   payment-01: &payment-01 # image: payment-processor:latest
     build:
       context: ../payments
@@ -28,23 +44,22 @@ services:
       - PORT=8080
       - BASE_URL_PAYMENT_PROCESSOR=http://payment-processor-default:8080
       - BASE_URL_PAYMENT_PROCESSOR_FALLBACK=http://payment-processor-fallback:8080
+      - REDIS_PORT=6379
+      - REDIS_HOST=payment-queue
     networks:
       - backend
       - payment-processor
+    depends_on:
+      - payment-queue
     deploy:
       resources:
         limits:
-          cpus: '0.6'
-          memory: '150MB'
+          cpus: '0.5'
+          memory: '125MB'
   payment-02:
     <<: *payment-01
     container_name: payment-02
     hostname: payment-02
-    deploy:
-      resources:
-        limits:
-          cpus: '0.6'
-          memory: '150MB'
 networks:
   backend:
     driver: bridge
