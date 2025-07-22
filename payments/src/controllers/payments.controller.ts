@@ -18,12 +18,6 @@ export class PaymentsController {
     @Body()
     request: PaymentRequest,
   ): Promise<PaymentResponse> {
-    // const message = await this.paymentsService.processPayment({
-    //   correlationId: request.correlationId,
-    //   amount: request.amount,
-    // });
-    // return message;
-
     await this.paymentWorkerService.addPaymentToQueue({
       correlationId: request.correlationId,
       amount: request.amount,

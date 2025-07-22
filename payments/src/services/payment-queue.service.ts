@@ -9,7 +9,19 @@ export class PaymentQueueService {
     private paymentProcessorQueue: Queue,
   ) {}
 
-  async addPaymentToQueue(paymentData: any): Promise<void> {
-    await this.paymentProcessorQueue.add('process-payment', paymentData);
+  async addPaymentToQueue(paymentData: {
+    correlationId: string;
+    amount: number;
+  }): Promise<void> {
+    await this.paymentProcessorQueue.add(
+      'process-payment',
+      { ...paymentData, status: 'pending' },
+      {
+        delay: 0,
+        removeOnComplete: true,
+        removeOnFail: true,
+        jobId: paymentData.correlationId,
+      },
+    );
   }
 }

@@ -7,7 +7,10 @@ import { Processor, Process } from '@nestjs/bull';
 @Processor('payment-processor')
 export class PaymentWorkerService {
   constructor(private readonly paymentsService: PaymentsService) {}
-  @Process('process-payment')
+  @Process({
+    concurrency: 10,
+    name: 'process-payment',
+  })
   async processPayment(job: Job): Promise<void> {
     const paymentData = job.data as { correlationId: string; amount: number };
 
