@@ -45,5 +45,9 @@ GET http://localhost:{{port}}/admin/payments-summary
 X-Rinha-Token: {{token}}
 
 ###
-POST http://localhost:{{port}}/admin/purge-payments
+POST http://localhost:8001/admin/purge-payments
+X-Rinha-Token: {{token}}
+
+###
+POST http://localhost:8002/admin/purge-payments
 X-Rinha-Token: {{token}}

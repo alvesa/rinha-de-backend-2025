@@ -1,5 +1,5 @@
 import { BullModule } from '@nestjs/bull';
-import { Module } from '@nestjs/common';
+import { ConsoleLogger, Module } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { PaymentQueueService } from './payment-queue.service';
 import { GatewayModule } from 'src/gateway/gateway.module';
@@ -13,11 +13,19 @@ import { PaymentWorkerService } from './payment-worker.service';
         port: parseInt(process.env.REDIS_PORT!),
       },
     }),
-    BullModule.registerQueue({ name: 'payment-processor' }),
+    BullModule.registerQueue({
+      name: 'paymentsQueue',
+      prefix: 'rinha:payments',
+    }),
     GatewayModule,
   ],
   controllers: [],
-  providers: [PaymentsService, PaymentQueueService, PaymentWorkerService],
+  providers: [
+    PaymentsService,
+    PaymentQueueService,
+    PaymentWorkerService,
+    ConsoleLogger,
+  ],
   exports: [PaymentsService, PaymentQueueService],
 })
 export class PaymentServiceModule {}

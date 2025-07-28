@@ -1,13 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { ConsoleLogger, Inject, Injectable } from '@nestjs/common';
 import { PaymentProcessorService } from 'src/gateway/payment-processor.service';
 import { PaymentDto } from './dtos/payment.dto';
 import { PaymentHealthCheckResponse } from 'src/controllers/dtos/payment-health-check.response';
 import { PaymentSummaryResponse } from 'src/controllers/dtos/payment-summary.response';
+import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Injectable()
 export class PaymentsService {
   constructor(
     private readonly paymentProcessorService: PaymentProcessorService,
+    private readonly logger: ConsoleLogger,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async processPayment({
@@ -17,23 +20,25 @@ export class PaymentsService {
     correlationId: string;
     amount: number;
   }): Promise<PaymentDto> {
-    try {
-      await this.paymentProcessorService.processPayment({
-        correlationId,
-        amount,
-      });
+    const result = await this.paymentProcessorService.processPayment({
+      correlationId,
+      amount,
+    });
 
-      return { message: 'Payment processed successfully' };
-    } catch (error: any) {
-      console.error(`Error processing payment: ${error}`);
+    if (result) {
+      return { message: 'Payment processed successfully ' };
+    }
 
+    const resultFallback =
       await this.paymentProcessorService.processPaymentFallback({
         correlationId,
         amount,
       });
 
-      return { message: 'Payment processed successfully with fallback' };
-    }
+    if (!resultFallback)
+      return { error: true, message: 'Payment processing failed' };
+
+    return { message: 'Payment processed successfully with fallback' };
   }
 
   async getPaymentSummary(

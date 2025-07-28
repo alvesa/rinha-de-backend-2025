@@ -1,10 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { PaymentsModule } from './payments.module';
+import { ConsoleLogger } from '@nestjs/common';
+
+const logger = new ConsoleLogger();
 
 async function bootstrap() {
   const app = await NestFactory.create(PaymentsModule);
   await app.listen(Number.parseInt(process.env.PORT!)).then(() => {
-    console.log(`Payments service is running on port ${process.env.PORT}`);
+    logger.log(`Payments service is running on port ${process.env.PORT}`);
   });
+
+  app.useLogger(logger);
 }
 void bootstrap();

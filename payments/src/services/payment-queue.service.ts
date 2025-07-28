@@ -5,7 +5,7 @@ import { Queue } from 'bull';
 @Injectable()
 export class PaymentQueueService {
   constructor(
-    @InjectQueue('payment-processor')
+    @InjectQueue('paymentsQueue')
     private paymentProcessorQueue: Queue,
   ) {}
 
@@ -13,15 +13,11 @@ export class PaymentQueueService {
     correlationId: string;
     amount: number;
   }): Promise<void> {
-    await this.paymentProcessorQueue.add(
-      'process-payment',
-      { ...paymentData, status: 'pending' },
-      {
-        delay: 0,
-        removeOnComplete: true,
-        removeOnFail: true,
-        jobId: paymentData.correlationId,
-      },
-    );
+    await this.paymentProcessorQueue.add('process-payment', paymentData, {
+      delay: 0,
+      removeOnFail: true,
+      jobId: paymentData.correlationId,
+      // attempts: 3,
+    });
   }
 }

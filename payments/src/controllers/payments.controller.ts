@@ -1,9 +1,16 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Res,
+} from '@nestjs/common';
 import { PaymentRequest } from './dtos/payment.request';
-import { PaymentResponse } from './dtos/payment.response';
 import { PaymentsService } from 'src/services/payments.service';
-import { PaymentHealthCheckResponse } from './dtos/payment-health-check.response';
 import { PaymentQueueService } from 'src/services/payment-queue.service';
+import { Response } from 'express';
 
 @Controller('payments')
 export class PaymentsController {
@@ -17,18 +24,17 @@ export class PaymentsController {
   async processPayment(
     @Body()
     request: PaymentRequest,
-  ): Promise<PaymentResponse> {
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<void> {
+    if (!request || !request.correlationId || !request.amount) {
+      throw new BadRequestException('Invalid request');
+    }
+
     await this.paymentWorkerService.addPaymentToQueue({
       correlationId: request.correlationId,
       amount: request.amount,
     });
 
-    return {
-      message: 'Payment request has been added to the processing queue.',
-    };
-  }
-
-  async paymentHealthCheck(): Promise<PaymentHealthCheckResponse> {
-    return this.paymentsService.paymentHealthCheck();
+    response.status(HttpStatus.CREATED).send();
   }
 }

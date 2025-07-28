@@ -17,17 +17,21 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "docker:queue": "docker compose -f 'participantes/docker-compose.yml' up -d --build 'payment-queue'"
   },
   "dependencies": {
+    "@keyv/redis": "^5.0.0",
     "@nestjs/bull": "^11.0.2",
     "@nestjs/bullmq": "^11.0.2",
+    "@nestjs/cache-manager": "^3.0.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "bull": "^4.16.5",
     "bullmq": "^5.56.4",
+    "cache-manager": "^7.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },

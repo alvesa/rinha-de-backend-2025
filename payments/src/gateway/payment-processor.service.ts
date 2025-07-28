@@ -1,9 +1,11 @@
-import { HttpException, Injectable } from '@nestjs/common';
+import { ConsoleLogger, HttpException, Injectable } from '@nestjs/common';
 import { PaymentHealthCheckResponse } from 'src/controllers/dtos/payment-health-check.response';
 import { PaymentSummaryDto } from 'src/services/dtos/payment-summary.dto';
 
 @Injectable()
 export class PaymentProcessorService {
+  constructor(private readonly logger: ConsoleLogger) {}
+
   BASE_URL_PAYMENT_PROCESSOR = process.env.BASE_URL_PAYMENT_PROCESSOR;
   BASE_URL_PAYMENT_PROCESSOR_FALLBACK =
     process.env.BASE_URL_PAYMENT_PROCESSOR_FALLBACK;
@@ -21,21 +23,15 @@ export class PaymentProcessorService {
       requestedAt: new Date(),
     });
 
-    const response = await fetch(
-      `${this.BASE_URL_PAYMENT_PROCESSOR}/payments`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: request,
+    const result = await fetch(`${this.BASE_URL_PAYMENT_PROCESSOR}/payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    );
-    if (!response.ok) {
-      throw new Error(`Failed to process payment: ${response.statusText}`);
-    }
+      body: request,
+    });
 
-    return await response.json();
+    return result.ok;
   }
 
   async processPaymentFallback({
@@ -51,7 +47,7 @@ export class PaymentProcessorService {
       requestedAt: new Date(),
     });
 
-    const response = await fetch(
+    const result = await fetch(
       `${this.BASE_URL_PAYMENT_PROCESSOR_FALLBACK}/payments`,
       {
         method: 'POST',
@@ -61,15 +57,8 @@ export class PaymentProcessorService {
         body: request,
       },
     );
-    if (!response.ok) {
-      console.error(
-        `Error processing payment with fallback: ${response.statusText}`,
-      );
 
-      throw new Error(`Failed to process payment: ${response.statusText}`);
-    }
-
-    return await response.json();
+    return result.ok;
   }
 
   async getPaymentSummary(
@@ -128,7 +117,7 @@ export class PaymentProcessorService {
 
   async paymentHealthCheck(): Promise<PaymentHealthCheckResponse> {
     const response = await fetch(
-      `${this.BASE_URL_PAYMENT_PROCESSOR}/service-health`,
+      `${this.BASE_URL_PAYMENT_PROCESSOR}/admin/service-health`,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -153,7 +142,7 @@ export class PaymentProcessorService {
 
   async paymentHealthCheckFallback(): Promise<PaymentHealthCheckResponse> {
     const response = await fetch(
-      `${this.BASE_URL_PAYMENT_PROCESSOR_FALLBACK}/service-health`,
+      `${this.BASE_URL_PAYMENT_PROCESSOR_FALLBACK}/admin/service-health`,
       {
         headers: {
           'Content-Type': 'application/json',
