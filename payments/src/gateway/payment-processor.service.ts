@@ -1,10 +1,12 @@
-import { ConsoleLogger, HttpException, Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { PaymentHealthCheckResponse } from 'src/controllers/dtos/payment-health-check.response';
 import { PaymentSummaryDto } from 'src/services/dtos/payment-summary.dto';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class PaymentProcessorService {
-  constructor(private readonly logger: ConsoleLogger) {}
+  constructor(private readonly httpService: HttpService) {}
 
   BASE_URL_PAYMENT_PROCESSOR = process.env.BASE_URL_PAYMENT_PROCESSOR;
   BASE_URL_PAYMENT_PROCESSOR_FALLBACK =
@@ -17,21 +19,29 @@ export class PaymentProcessorService {
     correlationId: string;
     amount: number;
   }): Promise<any> {
-    const request = JSON.stringify({
+    const request = {
       correlationId,
       amount,
       requestedAt: new Date(),
-    });
+    };
+    try {
+      const result = await firstValueFrom(
+        this.httpService.post(
+          `${this.BASE_URL_PAYMENT_PROCESSOR}/payments`,
+          request,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        ),
+      );
 
-    const result = await fetch(`${this.BASE_URL_PAYMENT_PROCESSOR}/payments`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: request,
-    });
-
-    return result.ok;
+      return result.data;
+    } catch (error) {
+      // console.log(error.response?.statusText);
+      return;
+    }
   }
 
   async processPaymentFallback({
@@ -47,18 +57,23 @@ export class PaymentProcessorService {
       requestedAt: new Date(),
     });
 
-    const result = await fetch(
-      `${this.BASE_URL_PAYMENT_PROCESSOR_FALLBACK}/payments`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: request,
-      },
-    );
+    try {
+      const result = await firstValueFrom(
+        this.httpService.post(
+          `${this.BASE_URL_PAYMENT_PROCESSOR_FALLBACK}/payments`,
+          request,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          },
+        ),
+      );
 
-    return result.ok;
+      return result.data;
+    } catch (error) {
+      return;
+    }
   }
 
   async getPaymentSummary(
@@ -67,24 +82,25 @@ export class PaymentProcessorService {
   ): Promise<PaymentSummaryDto> {
     const parameters = from && to ? `?from=${from}&to=${to}` : '';
 
-    const response = await fetch(
-      `${this.BASE_URL_PAYMENT_PROCESSOR}/admin/payments-summary${parameters}`,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Rinha-Token': '123',
+    const response = await firstValueFrom(
+      this.httpService.get(
+        `${this.BASE_URL_PAYMENT_PROCESSOR}/admin/payments-summary${parameters}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Rinha-Token': '123',
+          },
         },
-        method: 'GET',
-      },
+      ),
     );
-    if (!response.ok) {
+    if (!response.data) {
       throw new HttpException(
         `Failed to get payment summary: ${response.statusText}`,
         response.status,
       );
     }
 
-    const result: PaymentSummaryDto = await response.json();
+    const result: PaymentSummaryDto = response.data;
     return result;
   }
 
@@ -94,45 +110,46 @@ export class PaymentProcessorService {
   ): Promise<PaymentSummaryDto> {
     const parameters = from && to ? `?from=${from}&to=${to}` : '';
 
-    const response = await fetch(
-      `${this.BASE_URL_PAYMENT_PROCESSOR_FALLBACK}/admin/payments-summary${parameters}`,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Rinha-Token': '123',
+    const response = await firstValueFrom(
+      this.httpService.get(
+        `${this.BASE_URL_PAYMENT_PROCESSOR_FALLBACK}/admin/payments-summary${parameters}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Rinha-Token': '123',
+          },
         },
-        method: 'GET',
-      },
+      ),
     );
-    if (!response.ok) {
+    if (!response.data) {
       throw new HttpException(
         `Failed to get payment summary: ${response.statusText}`,
         response.status,
       );
     }
 
-    const result: PaymentSummaryDto = await response.json();
+    const result: PaymentSummaryDto = response.data;
     return result;
   }
 
   async paymentHealthCheck(): Promise<PaymentHealthCheckResponse> {
-    const response = await fetch(
-      `${this.BASE_URL_PAYMENT_PROCESSOR}/admin/service-health`,
-      {
-        headers: {
-          'Content-Type': 'application/json',
+    const response = await firstValueFrom(
+      this.httpService.get(
+        `${this.BASE_URL_PAYMENT_PROCESSOR}/admin/service-health`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
         },
-        method: 'GET',
-      },
+      ),
     );
-    if (!response.ok) {
+    if (!response.data) {
       throw new Error(
         `Failed to check payment service health: ${response.statusText}`,
       );
     }
 
-    const result: { failing: boolean; minResponseTime: number } =
-      await response.json();
+    const result: { failing: boolean; minResponseTime: number } = response.data;
 
     return {
       failing: result.failing,
@@ -141,23 +158,23 @@ export class PaymentProcessorService {
   }
 
   async paymentHealthCheckFallback(): Promise<PaymentHealthCheckResponse> {
-    const response = await fetch(
-      `${this.BASE_URL_PAYMENT_PROCESSOR_FALLBACK}/admin/service-health`,
-      {
-        headers: {
-          'Content-Type': 'application/json',
+    const response = await firstValueFrom(
+      this.httpService.get(
+        `${this.BASE_URL_PAYMENT_PROCESSOR_FALLBACK}/admin/service-health`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
         },
-        method: 'GET',
-      },
+      ),
     );
-    if (!response.ok) {
+    if (!response.data) {
       throw new Error(
         `Failed to check payment service health: ${response.statusText}`,
       );
     }
 
-    const result: { failing: boolean; minResponseTime: number } =
-      await response.json();
+    const result: { failing: boolean; minResponseTime: number } = response.data;
 
     return {
       failing: result.failing,

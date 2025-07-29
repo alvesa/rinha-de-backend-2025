@@ -15,7 +15,11 @@ Content-Type: application/json
 GET http://localhost:{{port}}/payments/service-health
 
 ### 
-GET http://localhost:{{port}}/admin/payments-summary
+GET http://localhost:8001/admin/payments-summary
+X-Rinha-Token: {{token}}
+
+### 
+GET http://localhost:8002/admin/payments-summary
 X-Rinha-Token: {{token}}
 
 ### 

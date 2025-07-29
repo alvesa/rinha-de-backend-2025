@@ -13,15 +13,9 @@ export class PaymentWorkerService {
   })
   async processPayment(job: Job): Promise<void> {
     const paymentData = job.data as { correlationId: string; amount: number };
-    const result = await this.paymentsService.processPayment({
+    await this.paymentsService.processPayment({
       correlationId: paymentData.correlationId,
       amount: paymentData.amount,
     });
-    // if (!result.error) {
-    //   await job.moveToCompleted('Payment processed successfully', true);
-    // } else {
-    //   await job.moveToFailed(new Error('Payment processing failed'));
-    //   //await job.retry();
-    // }
   }
 }

@@ -15,9 +15,8 @@ export class PaymentQueueService {
   }): Promise<void> {
     await this.paymentProcessorQueue.add('process-payment', paymentData, {
       delay: 0,
-      removeOnFail: true,
+      removeOnComplete: true,
       jobId: paymentData.correlationId,
-      // attempts: 3,
     });
   }
 }

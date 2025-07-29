@@ -38,7 +38,9 @@ export class PaymentsService {
     if (!resultFallback)
       return { error: true, message: 'Payment processing failed' };
 
-    return { message: 'Payment processed successfully with fallback' };
+    return {
+      message: 'Payment processed successfully with fallback',
+    };
   }
 
   async getPaymentSummary(
