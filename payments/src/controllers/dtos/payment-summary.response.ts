@@ -7,4 +7,12 @@ export class PaymentSummaryResponse {
     totalRequests: number;
     totalAmount: number;
   };
+  myDefault: {
+    totalRequests: number;
+    totalAmount: number;
+  };
+  myFallback: {
+    totalRequests: number;
+    totalAmount: number;
+  };
 }

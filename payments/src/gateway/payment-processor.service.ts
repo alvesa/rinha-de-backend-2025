@@ -4,6 +4,11 @@ import { PaymentSummaryDto } from 'src/services/dtos/payment-summary.dto';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 
+export interface PaymentProcessorResponse {
+  message?: string;
+  error?: any;
+}
+
 @Injectable()
 export class PaymentProcessorService {
   constructor(private readonly httpService: HttpService) {}
@@ -18,7 +23,7 @@ export class PaymentProcessorService {
   }: {
     correlationId: string;
     amount: number;
-  }): Promise<any> {
+  }): Promise<PaymentProcessorResponse> {
     const request = {
       correlationId,
       amount,
@@ -37,10 +42,11 @@ export class PaymentProcessorService {
         ),
       );
 
-      return result.data;
+      return result.data as PaymentProcessorResponse;
     } catch (error) {
-      // console.log(error.response?.statusText);
-      return;
+      return {
+        error,
+      };
     }
   }
 
@@ -50,7 +56,7 @@ export class PaymentProcessorService {
   }: {
     correlationId: string;
     amount: number;
-  }): Promise<any> {
+  }): Promise<PaymentProcessorResponse> {
     const request = JSON.stringify({
       correlationId,
       amount,
@@ -70,9 +76,11 @@ export class PaymentProcessorService {
         ),
       );
 
-      return result.data;
+      return result.data as PaymentProcessorResponse;
     } catch (error) {
-      return;
+      return {
+        error,
+      };
     }
   }
 

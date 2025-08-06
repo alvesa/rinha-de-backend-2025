@@ -14,8 +14,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.2'
-          memory: '50MB'
+          cpus: '0.1'
+          memory: '30MB'
   payment-queue:
     image: redis:alpine
     container_name: payment-queue
@@ -31,8 +31,8 @@ services:
       resources:
         limits:
           cpus: '0.3'
-          memory: '100MB'
-  payment-01: &payment-01 # image: payment-processor:latest
+          memory: '70MB'
+  payment-01: &payment-01
     build:
       context: ../payments
       dockerfile: Dockerfile
@@ -54,7 +54,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
+          cpus: '0.55'
           memory: '125MB'
   payment-02:
     <<: *payment-01

@@ -5,6 +5,12 @@ import { PaymentHealthCheckResponse } from 'src/controllers/dtos/payment-health-
 import { PaymentSummaryResponse } from 'src/controllers/dtos/payment-summary.response';
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 
+const DEFAULT_TOTAL_REQUESTS_CACHE_KEY = 'rinha:payments:default:totalRequests';
+const DEFAULT_TOTAL_AMOUNT_CACHE_KEY = 'rinha:payments:default:totalAmount';
+const FALLBACK_TOTAL_REQUESTS_CACHE_KEY =
+  'rinha:payments:fallback:totalRequests';
+const FALLBACK_TOTAL_AMOUNT_CACHE_KEY = 'rinha:payments:fallback:totalAmount';
+
 @Injectable()
 export class PaymentsService {
   constructor(
@@ -25,8 +31,23 @@ export class PaymentsService {
       amount,
     });
 
-    if (result) {
-      return { message: 'Payment processed successfully ' };
+    if (!result.error) {
+      const [totalRequests, totalAmount] = await this.cacheManager.mget<number>(
+        [DEFAULT_TOTAL_REQUESTS_CACHE_KEY, DEFAULT_TOTAL_AMOUNT_CACHE_KEY],
+      );
+
+      await this.cacheManager.mset<number>([
+        {
+          key: DEFAULT_TOTAL_REQUESTS_CACHE_KEY,
+          value: (totalRequests || 0) + 1,
+        },
+        {
+          key: DEFAULT_TOTAL_AMOUNT_CACHE_KEY,
+          value: (totalAmount || 0) + amount,
+        },
+      ]);
+
+      return { message: result.message! };
     }
 
     const resultFallback =
@@ -35,11 +56,28 @@ export class PaymentsService {
         amount,
       });
 
-    if (!resultFallback)
+    if (resultFallback.error)
       return { error: true, message: 'Payment processing failed' };
 
+    const [totalRequestsFallback, totalAmountFallback] =
+      await this.cacheManager.mget<number>([
+        FALLBACK_TOTAL_REQUESTS_CACHE_KEY,
+        FALLBACK_TOTAL_AMOUNT_CACHE_KEY,
+      ]);
+
+    await this.cacheManager.mset<number>([
+      {
+        key: FALLBACK_TOTAL_REQUESTS_CACHE_KEY,
+        value: (totalRequestsFallback || 0) + 1,
+      },
+      {
+        key: FALLBACK_TOTAL_AMOUNT_CACHE_KEY,
+        value: (totalAmountFallback || 0) + amount,
+      },
+    ]);
+
     return {
-      message: 'Payment processed successfully with fallback',
+      message: result.message!,
     };
   }
 
@@ -53,6 +91,18 @@ export class PaymentsService {
     const fallbackPaymentSummary =
       await this.paymentProcessorService.getPaymentSummaryFallback(from, to);
 
+    const [
+      myDefaultPaymentTotal,
+      myDefaultTotalAmount,
+      myFallbackPaymentTotal,
+      myFallbackTotalAmount,
+    ] = await this.cacheManager.mget<number>([
+      DEFAULT_TOTAL_REQUESTS_CACHE_KEY,
+      DEFAULT_TOTAL_AMOUNT_CACHE_KEY,
+      FALLBACK_TOTAL_REQUESTS_CACHE_KEY,
+      FALLBACK_TOTAL_AMOUNT_CACHE_KEY,
+    ]);
+
     return {
       default: {
         totalRequests: defaultPaymentSummary.totalRequests,
@@ -61,6 +111,14 @@ export class PaymentsService {
       fallback: {
         totalRequests: fallbackPaymentSummary.totalRequests,
         totalAmount: fallbackPaymentSummary.totalAmount,
+      },
+      myDefault: {
+        totalRequests: myDefaultPaymentTotal!,
+        totalAmount: myDefaultTotalAmount!,
+      },
+      myFallback: {
+        totalRequests: myFallbackPaymentTotal!,
+        totalAmount: myFallbackTotalAmount!,
       },
     };
   }
