@@ -8,14 +8,20 @@ import { Processor, Process } from '@nestjs/bull';
 export class PaymentWorkerService {
   constructor(private readonly paymentsService: PaymentsService) {}
   @Process({
-    concurrency: 1000,
+    concurrency: 2,
     name: 'process-payment',
   })
   async processPayment(job: Job): Promise<void> {
     const paymentData = job.data as { correlationId: string; amount: number };
-    await this.paymentsService.processPayment({
+    const result = await this.paymentsService.processPayment({
       correlationId: paymentData.correlationId,
       amount: paymentData.amount,
     });
+
+    if (result.error) {
+      await job.moveToFailed({
+        message: 'Payment processing failed',
+      });
+    }
   }
 }

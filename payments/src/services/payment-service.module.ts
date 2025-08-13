@@ -4,6 +4,8 @@ import { PaymentsService } from './payments.service';
 import { PaymentQueueService } from './payment-queue.service';
 import { GatewayModule } from 'src/gateway/gateway.module';
 import { PaymentWorkerService } from './payment-worker.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Payments } from 'src/repository/entities/payments.entity';
 
 @Module({
   imports: [
@@ -18,6 +20,7 @@ import { PaymentWorkerService } from './payment-worker.service';
       prefix: 'rinha:payments',
     }),
     GatewayModule,
+    TypeOrmModule.forFeature([Payments]),
   ],
   controllers: [],
   providers: [

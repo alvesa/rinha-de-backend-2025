@@ -1,22 +1,19 @@
-import { ConsoleLogger, Inject, Injectable } from '@nestjs/common';
+import { ConsoleLogger, Injectable } from '@nestjs/common';
 import { PaymentProcessorService } from 'src/gateway/payment-processor.service';
 import { PaymentDto } from './dtos/payment.dto';
 import { PaymentHealthCheckResponse } from 'src/controllers/dtos/payment-health-check.response';
 import { PaymentSummaryResponse } from 'src/controllers/dtos/payment-summary.response';
-import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
-
-const DEFAULT_TOTAL_REQUESTS_CACHE_KEY = 'rinha:payments:default:totalRequests';
-const DEFAULT_TOTAL_AMOUNT_CACHE_KEY = 'rinha:payments:default:totalAmount';
-const FALLBACK_TOTAL_REQUESTS_CACHE_KEY =
-  'rinha:payments:fallback:totalRequests';
-const FALLBACK_TOTAL_AMOUNT_CACHE_KEY = 'rinha:payments:fallback:totalAmount';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Payments } from 'src/repository/entities/payments.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class PaymentsService {
   constructor(
     private readonly paymentProcessorService: PaymentProcessorService,
     private readonly logger: ConsoleLogger,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    @InjectRepository(Payments)
+    private paymentRepository: Repository<Payments>,
   ) {}
 
   async processPayment({
@@ -32,22 +29,16 @@ export class PaymentsService {
     });
 
     if (!result.error) {
-      const [totalRequests, totalAmount] = await this.cacheManager.mget<number>(
-        [DEFAULT_TOTAL_REQUESTS_CACHE_KEY, DEFAULT_TOTAL_AMOUNT_CACHE_KEY],
-      );
+      await this.paymentRepository.insert({
+        correlationId,
+        amount: Math.round(amount * 100),
+        requestedAt: new Date(),
+        processor: 'default',
+      });
 
-      await this.cacheManager.mset<number>([
-        {
-          key: DEFAULT_TOTAL_REQUESTS_CACHE_KEY,
-          value: (totalRequests || 0) + 1,
-        },
-        {
-          key: DEFAULT_TOTAL_AMOUNT_CACHE_KEY,
-          value: (totalAmount || 0) + amount,
-        },
-      ]);
-
-      return { message: result.message! };
+      return {
+        message: result.message!,
+      };
     }
 
     const resultFallback =
@@ -59,22 +50,12 @@ export class PaymentsService {
     if (resultFallback.error)
       return { error: true, message: 'Payment processing failed' };
 
-    const [totalRequestsFallback, totalAmountFallback] =
-      await this.cacheManager.mget<number>([
-        FALLBACK_TOTAL_REQUESTS_CACHE_KEY,
-        FALLBACK_TOTAL_AMOUNT_CACHE_KEY,
-      ]);
-
-    await this.cacheManager.mset<number>([
-      {
-        key: FALLBACK_TOTAL_REQUESTS_CACHE_KEY,
-        value: (totalRequestsFallback || 0) + 1,
-      },
-      {
-        key: FALLBACK_TOTAL_AMOUNT_CACHE_KEY,
-        value: (totalAmountFallback || 0) + amount,
-      },
-    ]);
+    await this.paymentRepository.insert({
+      correlationId,
+      amount: Math.round(amount * 100),
+      requestedAt: new Date(),
+      processor: 'fallback',
+    });
 
     return {
       message: result.message!,
@@ -82,8 +63,8 @@ export class PaymentsService {
   }
 
   async getPaymentSummary(
-    from: string,
-    to: string,
+    from?: string,
+    to?: string,
   ): Promise<PaymentSummaryResponse> {
     const defaultPaymentSummary =
       await this.paymentProcessorService.getPaymentSummary(from, to);
@@ -91,17 +72,40 @@ export class PaymentsService {
     const fallbackPaymentSummary =
       await this.paymentProcessorService.getPaymentSummaryFallback(from, to);
 
-    const [
-      myDefaultPaymentTotal,
-      myDefaultTotalAmount,
-      myFallbackPaymentTotal,
-      myFallbackTotalAmount,
-    ] = await this.cacheManager.mget<number>([
-      DEFAULT_TOTAL_REQUESTS_CACHE_KEY,
-      DEFAULT_TOTAL_AMOUNT_CACHE_KEY,
-      FALLBACK_TOTAL_REQUESTS_CACHE_KEY,
-      FALLBACK_TOTAL_AMOUNT_CACHE_KEY,
-    ]);
+    const [myPayments, myPaymentsCount] =
+      await this.paymentRepository.findAndCount();
+
+    const grouped = myPayments.reduce(
+      (acc, payment) => {
+        if (payment.processor === 'default') {
+          acc.default = {
+            processor: 'default',
+            amount: acc.default.amount + payment.amount,
+            counter: acc.default.counter + 1,
+          };
+        } else if (payment.processor === 'fallback') {
+          acc.fallback = {
+            processor: 'fallback',
+            amount: acc.fallback.amount + payment.amount,
+            counter: acc.fallback.counter + 1,
+          };
+        }
+        return acc;
+      },
+      {
+        default: {
+          processor: 'default',
+          amount: 0,
+          counter: 0,
+        },
+
+        fallback: {
+          processor: 'fallback',
+          amount: 0,
+          counter: 0,
+        },
+      },
+    );
 
     return {
       default: {
@@ -113,12 +117,12 @@ export class PaymentsService {
         totalAmount: fallbackPaymentSummary.totalAmount,
       },
       myDefault: {
-        totalRequests: myDefaultPaymentTotal!,
-        totalAmount: myDefaultTotalAmount!,
+        totalRequests: myPaymentsCount,
+        totalAmount: grouped.default.amount / 100,
       },
       myFallback: {
-        totalRequests: myFallbackPaymentTotal!,
-        totalAmount: myFallbackTotalAmount!,
+        totalRequests: 0,
+        totalAmount: 0,
       },
     };
   }

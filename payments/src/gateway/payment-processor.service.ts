@@ -85,8 +85,8 @@ export class PaymentProcessorService {
   }
 
   async getPaymentSummary(
-    from: string,
-    to: string,
+    from?: string,
+    to?: string,
   ): Promise<PaymentSummaryDto> {
     const parameters = from && to ? `?from=${from}&to=${to}` : '';
 
@@ -113,8 +113,8 @@ export class PaymentProcessorService {
   }
 
   async getPaymentSummaryFallback(
-    from: string,
-    to: string,
+    from?: string,
+    to?: string,
   ): Promise<PaymentSummaryDto> {
     const parameters = from && to ? `?from=${from}&to=${to}` : '';
 
