@@ -55,9 +55,10 @@ services:
           memory: '70MB'
 
   payment-01: &payment-01
-    build:
-      context: ../payments
-      dockerfile: Dockerfile
+    # build:
+    # context: ../payments
+    # dockerfile: Dockerfile
+    image: alvesa/rinha-backend-2025:latest
     container_name: payment-01
     hostname: payment-01
     expose:
