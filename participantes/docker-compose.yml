@@ -15,7 +15,7 @@ services:
       resources:
         limits:
           cpus: '0.1'
-          memory: '30MB'
+          memory: '20MB'
   payment-queue:
     image: redis:alpine
     container_name: payment-queue
@@ -31,7 +31,7 @@ services:
       resources:
         limits:
           cpus: '0.3'
-          memory: '70MB'
+          memory: '50MB'
   db:
     image: postgres:alpine
     container_name: db
@@ -81,8 +81,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.55'
-          memory: '125MB'
+          cpus: '0.4'
+          memory: '100MB'
   payment-02:
     <<: *payment-01
     container_name: payment-02
