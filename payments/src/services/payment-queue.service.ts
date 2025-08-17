@@ -15,7 +15,7 @@ export class PaymentQueueService {
   }): Promise<void> {
     await this.paymentProcessorQueue.add('process-payment', paymentData, {
       delay: 0,
-      // removeOnComplete: true,
+      removeOnComplete: true,
       jobId: paymentData.correlationId,
       timeout: 5000,
     });

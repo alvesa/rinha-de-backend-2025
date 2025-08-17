@@ -8,8 +8,8 @@ export class PaymentSummaryController {
 
   @Get()
   async getPaymentSummary(
-    @Query('from') from: string,
-    @Query('to') to: string,
+    @Query('from') from: Date,
+    @Query('to') to: Date,
   ): Promise<PaymentSummaryResponse> {
     return await this.paymentsService.getPaymentSummary(from, to);
   }

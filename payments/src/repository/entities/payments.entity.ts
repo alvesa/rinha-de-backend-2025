@@ -1,6 +1,8 @@
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, Index } from 'typeorm';
 
 @Entity()
+@Index(['requestedAt', 'processor'])
+@Index(['processor'])
 export class Payments {
   @Column({ type: 'uuid', primary: true })
   correlationId: string;
@@ -8,7 +10,7 @@ export class Payments {
   @Column()
   amount: number;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'timestamptz', default: () => 'now()' })
   requestedAt: Date;
 
   @Column({ type: 'enum', enum: ['default', 'fallback'], default: 'default' })

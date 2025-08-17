@@ -5,7 +5,7 @@ import { PaymentHealthCheckResponse } from 'src/controllers/dtos/payment-health-
 import { PaymentSummaryResponse } from 'src/controllers/dtos/payment-summary.response';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Payments } from 'src/repository/entities/payments.entity';
-import { Repository } from 'typeorm';
+import { Between, Repository } from 'typeorm';
 
 @Injectable()
 export class PaymentsService {
@@ -32,7 +32,6 @@ export class PaymentsService {
       await this.paymentRepository.insert({
         correlationId,
         amount: Math.round(amount * 100),
-        requestedAt: new Date(),
         processor: 'default',
       });
 
@@ -53,7 +52,6 @@ export class PaymentsService {
     await this.paymentRepository.insert({
       correlationId,
       amount: Math.round(amount * 100),
-      requestedAt: new Date(),
       processor: 'fallback',
     });
 
@@ -63,19 +61,29 @@ export class PaymentsService {
   }
 
   async getPaymentSummary(
-    from?: string,
-    to?: string,
+    from?: Date,
+    to?: Date,
   ): Promise<PaymentSummaryResponse> {
-    const defaultPaymentSummary =
-      await this.paymentProcessorService.getPaymentSummary(from, to);
+    let queryParameters = {};
 
-    const fallbackPaymentSummary =
-      await this.paymentProcessorService.getPaymentSummaryFallback(from, to);
+    if (from && to) {
+      const utcFrom = new Date(from);
 
-    const [myPayments, myPaymentsCount] =
-      await this.paymentRepository.findAndCount();
+      const utcTo = new Date(to);
 
-    const grouped = myPayments.reduce(
+      queryParameters = {
+        requestedAt: Between(utcFrom, utcTo),
+      };
+    }
+
+    const myPayments = await this.paymentRepository.find({
+      where: queryParameters,
+    });
+
+    let myPaymentsDefaultCounter = 0;
+    let myPaymentsFallbackCounter = 0;
+
+    const payments = myPayments.reduce(
       (acc, payment) => {
         if (payment.processor === 'default') {
           acc.default = {
@@ -83,12 +91,14 @@ export class PaymentsService {
             amount: acc.default.amount + payment.amount,
             counter: acc.default.counter + 1,
           };
+          myPaymentsDefaultCounter++;
         } else if (payment.processor === 'fallback') {
           acc.fallback = {
             processor: 'fallback',
             amount: acc.fallback.amount + payment.amount,
             counter: acc.fallback.counter + 1,
           };
+          myPaymentsFallbackCounter++;
         }
         return acc;
       },
@@ -109,20 +119,12 @@ export class PaymentsService {
 
     return {
       default: {
-        totalRequests: defaultPaymentSummary.totalRequests,
-        totalAmount: defaultPaymentSummary.totalAmount,
+        totalRequests: myPaymentsDefaultCounter,
+        totalAmount: payments.default.amount / 100,
       },
       fallback: {
-        totalRequests: fallbackPaymentSummary.totalRequests,
-        totalAmount: fallbackPaymentSummary.totalAmount,
-      },
-      myDefault: {
-        totalRequests: myPaymentsCount,
-        totalAmount: grouped.default.amount / 100,
-      },
-      myFallback: {
-        totalRequests: 0,
-        totalAmount: 0,
+        totalRequests: myPaymentsFallbackCounter,
+        totalAmount: payments.fallback.amount / 100,
       },
     };
   }
